@@ -1,135 +1,219 @@
 <!doctype html>
 <html lang="en" class="h-full">
- <head>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Style Picker</title>
+  <title>Persona Picker</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="/_sdk/element_sdk.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    * { font-family: 'DM Sans', sans-serif; }
+    * { font-family: 'DM Sans', sans-serif; box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; background: #000; }
     ::-webkit-scrollbar { display: none; }
-    .style-item { transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); background: #000000; }
-    .style-item .label { color: #ffffff; transition: color 0.2s; }
-    .style-item .description { color: #ffffff; transition: color 0.2s; }
-    .style-item:hover { background: #ffffff; transform: scale(1.02); }
-    .style-item:hover .label { color: #000000; }
-    .style-item:hover .description { color: #000000; }
-    .style-item.selected { background: #ffffff; }
-    .style-item.selected .label { color: #000000; }
-    .style-item.selected .description { color: #000000; }
+    .persona-item { transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); background: #000; }
+    .persona-item .label, .persona-item .description { transition: color 0.18s ease; color: #fff; }
+    .persona-item:hover { background: #fff; transform: scale(1.015); }
+    .persona-item:hover .label, .persona-item:hover .description { color: #000; }
+    .persona-item.selected { background: #fff; }
+    .persona-item.selected .label, .persona-item.selected .description { color: #000; }
     #drawerPanel { transform: translateY(100%); transition: transform 0.3s ease-out; }
     #drawerPanel.open { transform: translateY(0); }
   </style>
-  <style>body { box-sizing: border-box; }</style>
-  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js" type="text/javascript"></script>
-  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
- </head>
- <body class="h-full m-0 p-0 bg-black flex items-center justify-center">
-  <div id="widget" class="w-[300px] h-full bg-black flex flex-col overflow-hidden relative z-10">
-   <div class="banner bg-white px-4 py-3 flex items-center justify-center rounded-2xl mx-2 my-1.5 h-[72px]"><button id="customBtn" class="bg-black text-white text-[13px] font-medium px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors">Custom Persona</button>
-   </div>
-   <div class="flex-1 overflow-y-auto">
-    <div id="list" class="flex flex-col"></div>
-   </div>
+</head>
+<body class="h-full bg-black">
+  <main id="app" class="h-full w-full bg-black flex justify-center">
+    <div class="w-[300px] h-full bg-black flex flex-col overflow-hidden relative">
+      <div class="bg-white px-4 py-3 flex items-center justify-center rounded-2xl mx-2 my-1.5 h-[72px]">
+        <button
+          id="customBtn"
+          class="bg-black text-white text-[13px] font-medium px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+          type="button"
+        >
+          Custom Persona
+        </button>
+      </div>
+
+      <div class="px-2 pb-2">
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="Search personas..."
+          class="w-full rounded-2xl border border-zinc-800 bg-black text-white text-[13px] px-4 py-3 outline-none placeholder:text-zinc-500"
+        >
+      </div>
+
+      <div id="listViewport" class="flex-1 overflow-y-auto px-2 pb-2">
+        <div id="list" class="flex flex-col gap-2"></div>
+        <div id="loading" class="hidden py-3 text-center text-[11px] text-zinc-500">Loading...</div>
+        <div id="sentinel" class="h-10"></div>
+      </div>
+    </div>
+  </main>
+
+  <div
+    id="drawerPanel"
+    class="fixed bottom-0 left-1/2 z-30 flex w-[292px] -translate-x-1/2 flex-col rounded-3xl border border-zinc-200 bg-white"
+    style="height: 50%;"
+  >
+    <textarea
+      id="personaInput"
+      placeholder="Enter custom persona..."
+      class="flex-1 resize-none rounded-3xl border-none bg-white px-4 py-3 text-[12px] text-black focus:outline-none"
+    ></textarea>
   </div>
-  <div id="drawerPanel" class="fixed bg-white flex flex-col z-30 rounded-3xl" style="border: 1px solid #e5e7eb; width: calc(260px - 4px); height: 50%; bottom: 0; left: 50%; margin-left: calc(-130px + 2px); margin-right: 2px; transform: translateY(100%); transition: transform 0.3s ease-out;">
-   <textarea id="personaInput" placeholder="Enter custom persona..." class="flex-1 bg-white text-black text-[12px] px-4 py-3 border-none focus:outline-none resize-none rounded-3xl"></textarea>
-  </div>
+
   <script>
-    const styles = [
-      { id: "knitted", label: "Knitted", description: "Cozy yarn textures, stitched details, handcrafted charm." },
-      { id: "digital-art", label: "Digital Art", description: "Bold modern illustration with crisp shapes and vivid colors." },
-      { id: "blueprint", label: "Blueprint", description: "Technical Prussian blue grids with white schematic lines." },
-      { id: "risograph", label: "Risograph", description: "Vibrant neon overlays with grainy lo-fi print textures." },
-      { id: "ukiyo-e", label: "Ukiyo-e", description: "Classic woodblock aesthetics with bold flat color planes." },
-      { id: "infrared", label: "Infrared", description: "High-energy thermal heat maps in surreal neon palettes." },
-      { id: "brutalism", label: "Brutalism", description: "Raw concrete forms with stark geometric minimalism." },
-      { id: "stained-glass", label: "Stained Glass", description: "Luminous color panels bound by dark leading lines." },
-      { id: "papercut", label: "Papercut", description: "Layered paper depth with clean shadow edges." },
-      { id: "alchemical-etch", label: "Alchemical Etch", description: "Mystical engraved lines with arcane symbol details." },
-      { id: "halftone-pop", label: "Halftone Pop", description: "Retro dot patterns with bold comic energy." },
-      { id: "charcoal", label: "Charcoal", description: "Soft smudged tones with expressive gestural marks." },
-      { id: "anime", label: "Anime", description: "Dynamic Japanese animation style with vivid expressions." },
-      { id: "watercolor", label: "Watercolor", description: "Flowing pigment washes with soft organic bleeds." },
-      { id: "trash-polka", label: "Trash Polka", description: "Chaotic red-black collage with typographic fragments." },
-      { id: "ignorant-tattoo", label: "Ignorant Tattoo", description: "Raw naive linework with punk DIY attitude." },
-      { id: "woodcut-engraving", label: "Woodcut Engraving", description: "Deep carved lines with dramatic tonal contrast." },
-      { id: "glitch-ink", label: "Glitch Ink", description: "Distorted digital artifacts over organic ink strokes." },
-      { id: "biomechanical", label: "Biomechanical", description: "Fusion of organic tissue and mechanical components." },
-      { id: "continuous-line", label: "Continuous Line", description: "Single unbroken stroke capturing form and flow." },
-      { id: "heavy-blackwork", label: "Heavy Blackwork", description: "Dense solid black fills with graphic impact." },
-      { id: "sketchwork", label: "Sketchwork", description: "Loose pencil energy with visible construction lines." },
-      { id: "stippling-dotwork", label: "Stippling Dotwork", description: "Thousands of dots building tone and texture." },
-      { id: "white-ink", label: "White Ink", description: "Ethereal pale lines on skin-tone canvas." },
-      { id: "Cyberpunk", label: "Cyberpunk", description: "Neon-drenched dystopia with chrome and circuitry." },
-      { id: "futuristic", label: "Futuristic", description: "Sleek sci-fi forms with holographic luminescence." },
-      { id: "lofi-comic", label: "Lo-Fi Comic", description: "Muted tones with hand-drawn indie comic warmth." }
-    ];
+    const state = {
+      items: [],
+      offset: 0,
+      pageSize: 50,
+      selectedPersonaId: null,
+      query: "",
+      drawerOpen: false,
+      loading: false,
+      hasMore: true
+    };
 
-    let selectedId = null;
-    const list = document.getElementById('list');
+    const els = {
+      list: document.getElementById("list"),
+      loading: document.getElementById("loading"),
+      sentinel: document.getElementById("sentinel"),
+      searchInput: document.getElementById("searchInput"),
+      customBtn: document.getElementById("customBtn"),
+      drawerPanel: document.getElementById("drawerPanel"),
+      personaInput: document.getElementById("personaInput"),
+      listViewport: document.getElementById("listViewport")
+    };
 
-    styles.forEach(s => {
-      const item = document.createElement('div');
-      item.className = 'style-item px-4 py-3 cursor-pointer rounded-2xl transition-all duration-150';
-      item.dataset.id = s.id;
-      item.innerHTML = `
-        <div class="flex items-center gap-3">
-          <div class="min-w-0">
-            <div class="label text-[13px] font-medium leading-tight">${s.label}</div>
-            <div class="description text-[11px] mt-0.5 leading-snug">${s.description}</div>
-          </div>
-        </div>
-      `;
-      item.addEventListener('click', () => {
-        selectedId = s.id;
-        document.querySelectorAll('.style-item').forEach(el => {
-          el.classList.remove('selected');
-        });
-        item.classList.add('selected');
+    async function fetchPersonas(reset = false) {
+      if (state.loading) return;
+      if (!state.hasMore && !reset) return;
+
+      state.loading = true;
+      els.loading.classList.remove("hidden");
+
+      const response = await fetch("/api/personas/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: state.query,
+          limit: state.pageSize,
+          offset: reset ? 0 : state.offset
+        })
       });
-      list.appendChild(item);
-    });
 
-    const customBtn = document.getElementById('customBtn');
-    const drawerPanel = document.getElementById('drawerPanel');
-    let drawerOpen = false;
-    
-    function openDrawer() {
-      drawerPanel.style.transform = 'translateY(0)';
-      drawerOpen = true;
+      const data = await response.json();
+
+      state.items = reset ? data.items : [...state.items, ...data.items];
+      state.offset = data.nextOffset ?? state.items.length;
+      state.hasMore = data.hasMore ?? false;
+      state.loading = false;
+
+      renderList();
+      updateLoadingState();
     }
-    
-    function closeDrawer() {
-      drawerPanel.style.transform = 'translateY(100%)';
-      drawerOpen = false;
-    }
-    
-    customBtn.addEventListener('click', () => {
-      if (drawerOpen) {
-        closeDrawer();
-      } else {
-        openDrawer();
+
+    async function selectPersona(id) {
+      state.selectedPersonaId = id;
+
+      const response = await fetch("/api/personas/by-id", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+      });
+
+      const data = await response.json();
+
+      if (window.elementSdk?.setValue) {
+        window.elementSdk.setValue("selected_persona_id", data.id);
+        window.elementSdk.setValue("selected_persona_label", data.label);
+        window.elementSdk.setValue("selected_persona_description", data.description);
+        window.elementSdk.setValue("selected_persona", data.persona);
       }
-    });
 
-    window.elementSdk.init({
-      defaultConfig,
-      onConfigChange: async (config) => {
-        document.getElementById('title').textContent = config.widget_title || defaultConfig.widget_title;
-      },
-      mapToCapabilities: (config) => ({
-        recolorables: [],
-        borderables: [],
-        fontEditable: undefined,
-        fontSizeable: undefined
-      }),
-      mapToEditPanelValues: (config) => new Map([
-        ["widget_title", config.widget_title || defaultConfig.widget_title]
-      ])
-    });
+      renderList();
+    }
+
+    function toggleDrawer() {
+      state.drawerOpen = !state.drawerOpen;
+      els.drawerPanel.classList.toggle("open", state.drawerOpen);
+    }
+
+    function runSearch(value) {
+      state.query = value.trim();
+      state.offset = 0;
+      state.hasMore = true;
+      fetchPersonas(true);
+    }
+
+    function updateLoadingState() {
+      els.loading.classList.toggle("hidden", !state.loading);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderPersonaItem(item) {
+      const selectedClass = item.id === state.selectedPersonaId ? "selected" : "";
+
+      return `
+        <button
+          type="button"
+          class="persona-item ${selectedClass} w-full rounded-2xl px-4 py-3 text-left"
+          data-id="${item.id}"
+        >
+          <div class="flex items-center gap-3">
+            <div class="min-w-0">
+              <div class="label text-[13px] font-medium leading-tight">${escapeHtml(item.label)}</div>
+              <div class="description mt-0.5 text-[11px] leading-snug">${escapeHtml(item.description)}</div>
+            </div>
+          </div>
+        </button>
+      `;
+    }
+
+    function renderList() {
+      els.list.innerHTML = state.items.map(renderPersonaItem).join("");
+      els.list.querySelectorAll("[data-id]").forEach((node) => {
+        node.addEventListener("click", () => selectPersona(node.dataset.id));
+      });
+    }
+
+    function setupInfiniteScroll() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) fetchPersonas(false);
+        });
+      }, {
+        root: els.listViewport,
+        rootMargin: "120px",
+        threshold: 0
+      });
+
+      observer.observe(els.sentinel);
+    }
+
+    function bindEvents() {
+      els.customBtn.addEventListener("click", toggleDrawer);
+      els.searchInput.addEventListener("input", (event) => runSearch(event.target.value));
+      els.personaInput.addEventListener("input", (event) => {
+        if (window.elementSdk?.setValue) {
+          window.elementSdk.setValue("custom_persona", event.target.value);
+        }
+      });
+    }
+
+    bindEvents();
+    fetchPersonas(true);
+    setupInfiniteScroll();
   </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9f39454f87c54d3c',t:'MTc3NzQxMjkwMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
