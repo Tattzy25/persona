@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT || 8080);
-const HTML_FILE = path.join(__dirname, "rendered.html");
+const HTML_FILE = path.join(__dirname, "index.html");
 
 const client = Search.fromEnv();
 const index = client.index(process.env.UPSTASH_INDEX_NAME);
