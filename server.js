@@ -237,17 +237,16 @@ async function handleSearch(req, res) {
   const sliced = rawItems.slice(offset, offset + limit).map(normalizeItem);
 
   return sendJson(res, 200, {
-    items: sliced,
-    pagination: {
-      offset,
-      limit,
-      returned: sliced.length,
-      nextOffset: offset + sliced.length,
-      hasMore: rawItems.length > offset + sliced.length,
-    },
-    retryContext: results.context,
-  });
-}
+  items: sliced,
+  nextOffset: offset + sliced.length,
+  hasMore: rawItems.length > offset + sliced.length,
+  pagination: {
+    offset,
+    limit,
+    returned: sliced.length,
+  },
+  retryContext: results.context,
+});
 
 async function handleById(req, res) {
   const body = await parseJsonBody(req);
@@ -294,9 +293,9 @@ async function handleById(req, res) {
   });
 
   return sendJson(res, 200, {
-    item: result.data,
-    retryContext: result.context,
-  });
+  ...result.data,
+  retryContext: result.context,
+});
 }
 
 const server = http.createServer(async (req, res) => {
