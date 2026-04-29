@@ -3,5 +3,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.js"
+  },
+  "dependencies": {
+    "@upstash/search": "^0.1.7"
   }
 }
