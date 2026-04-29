@@ -138,8 +138,10 @@
     }
 
     function toggleDrawer() {
-      state.drawerOpen = !state.drawerOpen;
-      els.drawerPanel.classList.toggle("open", state.drawerOpen);
+  state.drawerOpen = !state.drawerOpen;
+  els.drawerPanel.style.transform = state.drawerOpen
+    ? "translate(-50%, 0)"
+    : "translate(-50%, 100%)";
     }
 
     function runSearch(value) {
