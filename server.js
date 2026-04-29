@@ -1,4 +1,3 @@
-// server.js
 import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -48,6 +47,7 @@ function isRetryableUpstashError(error) {
   const code = String(error?.code || error?.cause?.code || "");
 
   if ([408, 425, 429, 500, 502, 503, 504].includes(status)) return true;
+
   if (
     [
       "ETIMEDOUT",
@@ -56,10 +56,12 @@ function isRetryableUpstashError(error) {
       "ENOTFOUND",
       "UND_ERR_CONNECT_TIMEOUT",
     ].includes(code)
-  )
+  ) {
     return true;
+  }
 
   const msg = String(error?.message || "").toLowerCase();
+
   if (
     msg.includes("timeout") ||
     msg.includes("timed out") ||
@@ -187,7 +189,7 @@ async function parseJsonBody(req) {
 
 function normalizeItem(item) {
   return {
-    id: item?.id ?? "",
+    id: item?.id ?? item?.metadata?.id ?? "",
     label: item?.content?.label ?? item?.content?.title ?? "",
     description:
       item?.content?.description ?? item?.metadata?.seoDescription ?? "",
@@ -237,16 +239,17 @@ async function handleSearch(req, res) {
   const sliced = rawItems.slice(offset, offset + limit).map(normalizeItem);
 
   return sendJson(res, 200, {
-  items: sliced,
-  nextOffset: offset + sliced.length,
-  hasMore: rawItems.length > offset + sliced.length,
-  pagination: {
-    offset,
-    limit,
-    returned: sliced.length,
-  },
-  retryContext: results.context,
-});
+    items: sliced,
+    nextOffset: offset + sliced.length,
+    hasMore: rawItems.length > offset + sliced.length,
+    pagination: {
+      offset,
+      limit,
+      returned: sliced.length,
+    },
+    retryContext: results.context,
+  });
+}
 
 async function handleById(req, res) {
   const body = await parseJsonBody(req);
@@ -264,7 +267,9 @@ async function handleById(req, res) {
       });
 
       const items = Array.isArray(data) ? data : [];
-      const exact = items.find((item) => item?.id === id);
+      const exact = items.find(
+        (item) => item?.id === id || item?.metadata?.id === id,
+      );
 
       if (!exact) {
         throw new FatalError("Persona not found", { ...context, id });
@@ -293,9 +298,9 @@ async function handleById(req, res) {
   });
 
   return sendJson(res, 200, {
-  ...result.data,
-  retryContext: result.context,
-});
+    ...result.data,
+    retryContext: result.context,
+  });
 }
 
 const server = http.createServer(async (req, res) => {
@@ -345,5 +350,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
